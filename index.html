@@ -31,7 +31,6 @@
             line-height: 1.7;
             overflow-x: hidden;
             position: relative;
-            touch-action: none;
         }
 
         /* ===== VIDEO-LIKE CYBERPUNK BACKGROUND ===== */
@@ -151,6 +150,17 @@
             color: var(--accent); 
             text-shadow: 0 0 12px var(--accent-glow);
         }
+
+        /* ===== HAMBURGER MENU (MOBILE) ===== */
+        .hamburger {
+            display: none;
+            cursor: pointer;
+            font-size: 1.8rem;
+            color: var(--accent);
+            padding: 0.5rem;
+            z-index: 1001;
+        }
+
         .nav-links { 
             display: flex; 
             list-style: none; 
@@ -353,6 +363,7 @@
             color: var(--text); 
             border-radius: 12px; 
             padding: 1rem; 
+            font-size: 16px !important;
         }
         input:focus, textarea:focus { 
             outline: none;
@@ -381,11 +392,46 @@
             position: relative;
         }
 
+        /* ===== MOBILE RESPONSIVE ===== */
         @media (max-width: 768px) {
-            .nav-links { display: none; }
+            .hamburger { display: block; }
+            .nav-links {
+                position: fixed;
+                top: 70px;
+                right: -100%;
+                width: 260px;
+                height: calc(100vh - 70px);
+                background: rgba(13,10,26,0.98);
+                flex-direction: column;
+                align-items: center;
+                padding-top: 2rem;
+                transition: right .35s ease;
+                box-shadow: -4px 0 20px rgba(0,0,0,.5);
+                z-index: 999;
+                overflow-y: auto;
+            }
+            .nav-links.open { right: 0; }
+            .nav-links a { padding: 1rem 0; font-size: 1.1rem; width: 100%; text-align: center; }
             .hero-content h1 { font-size: 2.8rem; }
             .about-content { padding: 1.5rem; }
         }
+
+        @media (hover: none) and (pointer: coarse) {
+            .card.tilt { transform: none !important; }
+            .card:hover,
+            .card:focus-within {
+                transform: translateY(-6px);
+                box-shadow: 0 15px 30px rgba(176,38,255,.3);
+                border-color: var(--accent);
+            }
+            .cursor-glow { display: none; }
+        }
+
+        @media (pointer: coarse) {
+            .cursor-glow { display: none; }
+        }
+
+        html { scroll-behavior: smooth; }
     </style>
 </head>
 <body>
@@ -407,6 +453,10 @@
     <header>
         <nav class="container">
             <div class="logo">Santhosh M S</div>
+
+            <!-- Hamburger (mobile only) -->
+            <div class="hamburger">Menu</div>
+
             <ul class="nav-links">
                 <li><a href="#home" class="ripple">Home</a></li>
                 <li><a href="#about" class="ripple">About</a></li>
@@ -443,9 +493,6 @@
             </div>
         </div>
     </section>
-
-    <!-- [ALL OTHER SECTIONS: Skills, Certifications, Internships, Workshops, Projects, Contact] -->
-    <!-- (100% unchanged — only background enhanced) -->
 
     <!-- SKILLS -->
     <section id="skills" style="background:#120f24;">
@@ -566,20 +613,33 @@
     </footer>
 
     <script>
-        // Cursor Glow
-        const cursor = document.querySelector('.cursor-glow');
-        document.addEventListener('mousemove', e => {
-            cursor.style.left = e.clientX + 'px';
-            cursor.style.top = e.clientY + 'px';
-            cursor.classList.add('active');
-        });
-        document.addEventListener('touchmove', e => {
-            cursor.style.left = e.touches[0].clientX + 'px';
-            cursor.style.top = e.touches[0].clientY + 'px';
-            cursor.classList.add('active');
+        /* ===== HAMBURGER MENU ===== */
+        const hamburger = document.querySelector('.hamburger');
+        const navLinks = document.querySelector('.nav-links');
+
+        hamburger.addEventListener('click', () => {
+            navLinks.classList.toggle('open');
+            hamburger.textContent = navLinks.classList.contains('open') ? 'Close' : 'Menu';
         });
 
-        // 3D Tilt
+        navLinks.querySelectorAll('a').forEach(a => {
+            a.addEventListener('click', () => {
+                navLinks.classList.remove('open');
+                hamburger.textContent = 'Menu';
+            });
+        });
+
+        /* ===== CURSOR GLOW (MOUSE ONLY) ===== */
+        const cursor = document.querySelector('.cursor-glow');
+        if (window.matchMedia('(pointer: fine)').matches) {
+            document.addEventListener('mousemove', e => {
+                cursor.style.left = e.clientX + 'px';
+                cursor.style.top = e.clientY + 'px';
+                cursor.classList.add('active');
+            });
+        }
+
+        /* ===== 3D CARD TILT ===== */
         document.querySelectorAll('.card').forEach(card => {
             let isDragging = false;
             const tilt = (x, y) => {
@@ -597,35 +657,46 @@
                 card.style.setProperty('--rotateY', '0deg');
                 card.classList.remove('tilt');
             };
+
             card.addEventListener('mousemove', e => { if (!isDragging) tilt(e.clientX, e.clientY); });
             card.addEventListener('mousedown', () => isDragging = true);
             card.addEventListener('mouseup', () => { isDragging = false; reset(); });
             card.addEventListener('mouseleave', reset);
-            card.addEventListener('touchmove', e => { e.preventDefault(); tilt(e.touches[0].clientX, e.touches[0].clientY); });
+
+            card.addEventListener('touchmove', e => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                tilt(touch.clientX, touch.clientY);
+            });
             card.addEventListener('touchend', reset);
         });
 
-        // Ripple
+        /* ===== RIPPLE EFFECT ===== */
         document.querySelectorAll('.ripple').forEach(el => {
-            el.addEventListener('click', e => {
+            const createRipple = (e) => {
+                const touch = e.touches ? e.touches[0] : e;
                 const rect = el.getBoundingClientRect();
-                const x = (e.clientX || e.touches[0].clientX) - rect.left;
-                const y = (e.clientY || e.touches[0].clientY) - rect.top;
+                const x = touch.clientX - rect.left;
+                const y = touch.clientY - rect.top;
+
                 const ripple = document.createElement('span');
                 ripple.style.position = 'absolute';
-                ripple.style.width = ripple.style.height = '10px';
-                ripple.style.background = 'rgba(176,38,255,0.4)';
+                ripple.style.width = ripple.style.height = '12px';
+                ripple.style.background = 'rgba(176,38,255,0.45)';
                 ripple.style.borderRadius = '50%';
                 ripple.style.left = x + 'px';
                 ripple.style.top = y + 'px';
-                ripple.style.transform = 'translate(-50%, -50%)';
+                ripple.style.transform = 'translate(-50%,-50%)';
                 ripple.style.animation = 'ripple-animation 0.6s ease-out';
                 el.appendChild(ripple);
                 setTimeout(() => ripple.remove(), 600);
-            });
+            };
+
+            el.addEventListener('click', createRipple);
+            el.addEventListener('touchstart', createRipple, { passive: true });
         });
 
-        // Data Flow Lines
+        /* ===== DATA FLOW LINES ===== */
         setInterval(() => {
             if (Math.random() > 0.6) {
                 const line = document.createElement('div');
@@ -637,26 +708,29 @@
             }
         }, 300);
 
-        // Smooth Scroll + Active Nav
+        /* ===== SMOOTH SCROLL + ACTIVE NAV ===== */
         document.querySelectorAll('a[href^="#"]').forEach(a => {
             a.addEventListener('click', e => {
                 e.preventDefault();
                 const target = document.querySelector(a.getAttribute('href'));
-                target.scrollIntoView({ behavior: 'smooth' });
-                document.querySelectorAll('.nav-links a').forEach(link => link.classList.remove('active'));
+                const offset = 80;
+                window.scrollTo({
+                    top: target.offsetTop - offset,
+                    behavior: 'smooth'
+                });
+                document.querySelectorAll('.nav-links a').forEach(l => l.classList.remove('active'));
                 a.classList.add('active');
             });
         });
 
         window.addEventListener('scroll', () => {
             let current = '';
-            document.querySelectorAll('section').forEach(section => {
-                const sectionTop = section.offsetTop - 100;
-                if (scrollY >= sectionTop) current = section.getAttribute('id');
+            document.querySelectorAll('section').forEach(sec => {
+                const top = sec.offsetTop - 120;
+                if (scrollY >= top) current = sec.getAttribute('id');
             });
             document.querySelectorAll('.nav-links a').forEach(a => {
-                a.classList.remove('active');
-                if (a.getAttribute('href') === `#${current}`) a.classList.add('active');
+                a.classList.toggle('active', a.getAttribute('href') === `#${current}`);
             });
         });
     </script>
